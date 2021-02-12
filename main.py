@@ -2,24 +2,44 @@ from datetime import datetime
 import os, pygame
 import pygame.camera
 
-text_color = (255, 255, 255)
+text_color = (0,255,0)
+countdown_length = 4
+
+# TODO move bg image according to scale (center cutoffs)
 
 class ScreenText(pygame.sprite.Sprite):
-    def __init__(self, allsprites, text):
+    def __init__(self, allsprites, text, initial_font_size):
         pygame.sprite.Sprite.__init__(self, allsprites)
 
         self.text = text
 
-        self.font = pygame.font.Font(None, 36)
+        self.font = pygame.font.Font(None, initial_font_size)
         self.image = self.font.render(self.text, 1, text_color)
-        self.pos = (100, 100)  # Set the location of the text
+        self.pos = (-1000, -1000)  # Set the location of the text
         self.rect = (self.pos, self.image.get_size())
 
     def update(self):
         self.image = self.font.render(self.text, 1, text_color)
+        self.rect = (self.pos, self.image.get_size())
 
     def change_text(self, new_text):
         self.text = new_text
+        self.image = self.font.render(self.text, 1, text_color)
+        self.rect = (self.pos, self.image.get_size())
+
+    def change_font(self, font_size):
+        self.font = pygame.font.Font(None, font_size)
+
+    def change_pos(self, new_pos):
+        self.pos = (new_pos)
+        self.rect = (self.pos, self.image.get_size())
+
+    def pos_to_center(self, offset_h=0, offset_v=0):
+        self.pos = (
+            pygame.display.get_window_size()[0] / 2 - self.image.get_width() / 2 + offset_h,
+            pygame.display.get_window_size()[1] / 2 - self.image.get_height() / 2 + offset_v
+        )
+        self.rect = (self.pos, self.image.get_size())
 
 
 def get_picture():
@@ -58,7 +78,7 @@ def load_image(name, colorkey=None):
 
 def get_background(panel):
 
-    fullname = os.path.join(get_main_dir(), 'bg-props.jpg')
+    fullname = os.path.join(get_main_dir(), 'inside_temp.png')
     try:
         bg_image = pygame.image.load(fullname)
     except pygame.error:
@@ -190,26 +210,69 @@ def main():
     BIG_IMG_WIDTH = big_img.get_width()
     BIG_IMG_HEIGHT = big_img.get_height()
 
-    screen_text = ScreenText(allsprites, 'testtesttest')
+    screen_text = ScreenText(allsprites, '', 120)
+    countdown_text = ScreenText(allsprites, '', 200)
 
     background = get_background(panel)
 
+    state = 'idle'
+
+    time_button_pressed = 0
+
     running = True
     while running:
-        for e in pygame.event.get() :
-            if e.type == pygame.QUIT :
-                sys.exit()
+        # clear screen
+        screen.blit(background, (0,0))
+
+        event_list = pygame.event.get()
+        
+        # Show a countdown to the user
+        if state == 'countdown':
+            # wait untill countdown_length seconds have passed
+            if pygame.time.get_ticks() > (time_button_pressed + (countdown_length * 1000)):
+                print('picture now!')
+                screen_text.change_pos((-1000, -1000))
+                countdown_text.change_pos((-1000, -1000))
+                state = 'result'
+            else: 
+                timer_text = str(int(
+                    countdown_length - ((pygame.time.get_ticks() - time_button_pressed) / 1000)
+                ))
+
+                if timer_text == '0':
+                    timer_text = 'Smile!'
+
+                countdown_text.change_text(timer_text)
+                countdown_text.pos_to_center(0, 100)
+                
+                
+
+        # Display the picture taken to the user
+        elif state == 'result':
+            # TODO
+            print('display result for XX seconds')
+            state = 'idle'
+
+        # Default state: waiting for interaction
+        elif state == 'idle': 
+            # Only receive events while idling
+            for e in event_list:
+                if e.type == pygame.QUIT :
+                    sys.exit()
+                if e.type == pygame.KEYUP and e.key == pygame.K_p:
+                    screen_text.change_text('Get ready')
+                    screen_text.pos_to_center(0, -200)
+                    countdown_text.pos_to_center(0, 100)
+                    time_button_pressed = pygame.time.get_ticks()
+                    state = 'countdown'
+
+        
 
         # grab next frame    
         img = webcam.get_image()
         resized_img = resize_img(img, panel_width, panel_height, big_img)
 
-
-        temp_string = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-        screen_text.change_text(str(temp_string))
-
         # draw webcam feed
-        screen.blit(background, (0,0))
         screen.blit(
             resized_img, 
             (
@@ -220,10 +283,6 @@ def main():
         allsprites.update()
         allsprites.draw(screen)
         pygame.display.update()
-
-
-
-    
 
 
 if __name__ == "__main__":
