@@ -6,8 +6,6 @@ text_color = (0,255,0)
 countdown_length = 4
 display_result_length = 4
 
-WINDOW_WIDTH = None
-WINDOW_HEIGHT = None
 
 # TODO move bg image according to scale (center cutoffs)
 
@@ -126,15 +124,21 @@ def resize_img(img, width, height, big_img):
 
 
 def main():
+    print('Starting selfie booth...')
     pygame.init()
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption("Selfie Booth")
 
     allsprites = pygame.sprite.Group()
 
+    global WINDOW_WIDTH 
     WINDOW_WIDTH = screen.get_width()
+    global WINDOW_HEIGHT 
     WINDOW_HEIGHT = screen.get_height()
 
+    print('Screen resolution is (w h)', WINDOW_WIDTH, WINDOW_HEIGHT)
+
+    print('Opening camera ...')
     pygame.camera.init()
     cameras = pygame.camera.list_cameras()
     webcam = pygame.camera.Camera(cameras[0])
@@ -143,16 +147,12 @@ def main():
     # grab first frame
     img = webcam.get_image()
 
+    print('Image loading succesful')
+
     IMG_WIDTH = img.get_width()
     IMG_HEIGHT = img.get_height()
 
-    # TODO make a panel (about 75% of screen size) to display the camera field in
-    # this way we prevent warping of the original aspect ratio
-
-    """
-        final image cant be bigger than 80% of screen height
-        
-    """
+    print ('Preparing image scaling for performance increase...')
     panel_height = WINDOW_HEIGHT * 0.8 # Height can't be more than 80%
     # how many times does original image fit in height? Width times THAT
     panel_width = IMG_WIDTH * (panel_height / IMG_HEIGHT)
@@ -163,6 +163,8 @@ def main():
     panel = pygame.Surface((panel_width + border_size, panel_height + border_size)) # +10 pixels on both sides to create a border
     panel.fill((255,0,0))
 
+    print('Image scaling...')
+
     # create big img size for fast scaling
     big_img = pygame.transform.scale(
         img,
@@ -170,6 +172,8 @@ def main():
     )
     BIG_IMG_WIDTH = big_img.get_width()
     BIG_IMG_HEIGHT = big_img.get_height()
+
+    print('Completing setup...')
 
     screen_text = ScreenText(allsprites, '', 120)
     countdown_text = ScreenText(allsprites, '', 200)
@@ -181,8 +185,9 @@ def main():
     time_button_pressed = 0
     time_pic_taken = 0
 
-    running = True
-    while running:
+    print('Setup complete. Starting main loop.')
+    print('Have a good day! :)')
+    while True:
         # clear screen
         screen.blit(background, (0,0))
 
@@ -195,7 +200,7 @@ def main():
                 screen_text.change_pos((-1000, -1000))
                 countdown_text.change_pos((-1000, -1000))
                 screen_text.change_text('Great picture?')
-                screen_text.pos_to_center(0, -400)
+                screen_text.pos_to_center(0, 300)
                 time_pic_taken = pygame.time.get_ticks()
                 # actually save picture here
 
