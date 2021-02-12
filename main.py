@@ -6,6 +6,9 @@ text_color = (0,255,0)
 countdown_length = 4
 display_result_length = 4
 
+WINDOW_WIDTH = None
+WINDOW_HEIGHT = None
+
 # TODO move bg image according to scale (center cutoffs)
 
 class ScreenText(pygame.sprite.Sprite):
@@ -37,8 +40,8 @@ class ScreenText(pygame.sprite.Sprite):
 
     def pos_to_center(self, offset_h=0, offset_v=0):
         self.pos = (
-            pygame.display.get_window_size()[0] / 2 - self.image.get_width() / 2 + offset_h,
-            pygame.display.get_window_size()[1] / 2 - self.image.get_height() / 2 + offset_v
+            WINDOW_WIDTH / 2 - self.image.get_width() / 2 + offset_h,
+            WINDOW_HEIGHT / 2 - self.image.get_height() / 2 + offset_v
         )
         self.rect = (self.pos, self.image.get_size())
 
@@ -60,17 +63,16 @@ def get_background(panel):
     bg = bg_image
 
     # scale to height
-    screen_width, screen_height = pygame.display.get_window_size()
     # if the aspect ratio is narrower than the screen
-    if (bg.get_width() * (screen_height / bg.get_height())) <= screen_width:
+    if (bg.get_width() * (WINDOW_HEIGHT / bg.get_height())) <= WINDOW_WIDTH:
         # scale to width and lose some content top and bottom
-        bg_w = screen_width
-        bg_h = bg.get_height() * (screen_width / bg.get_width())
+        bg_w = WINDOW_WIDTH
+        bg_h = bg.get_height() * (WINDOW_WIDTH / bg.get_width())
     # else if it's wider than the screen
     else:
         #scale to height and lose some content left and right
-        bg_h = screen_height
-        bg_w = bg.get_width() * (screen_height / bg.get_height())
+        bg_h = WINDOW_HEIGHT
+        bg_w = bg.get_width() * (WINDOW_HEIGHT / bg.get_height())
 
     bg_w = int(bg_w)
     bg_h = int(bg_h)
@@ -83,8 +85,8 @@ def get_background(panel):
     bg.blit(
         panel,
         (
-            pygame.display.get_window_size()[0] / 2 - panel.get_width() / 2,
-            pygame.display.get_window_size()[1] / 2 - panel.get_height() / 2,
+            WINDOW_WIDTH / 2 - panel.get_width() / 2,
+            WINDOW_HEIGHT / 2 - panel.get_height() / 2,
         )
     )
 
@@ -93,8 +95,7 @@ def get_background(panel):
     bg.blit(
         header_intro_text, 
         (
-            pygame.display.get_window_size()[0] / 2 - header_intro_text.get_width() / 2,
-            # (pygame.display.get_window_size()[1] / 100) * 5 # 20% height
+            WINDOW_WIDTH / 2 - header_intro_text.get_width() / 2,
             10
         )
     )
@@ -104,22 +105,10 @@ def get_background(panel):
     bg.blit(
         header_main_text, 
         (
-            pygame.display.get_window_size()[0] / 2 - header_main_text.get_width() / 2,
-            # (pygame.display.get_window_size()[1] / 100) * 5 + 40 # 20% height
+            WINDOW_WIDTH / 2 - header_main_text.get_width() / 2,
             50
         )
     )
-
-    # header_main_font = pygame.font.Font(None, 120)
-    # header_main_text = header_main_font.render("Selfie Booth!", 1, text_color)
-    # bg.blit(
-    #     header_main_text, 
-    #     (
-    #         pygame.display.get_window_size()[0] / 2 - header_main_text.get_width() / 2,
-    #         # (pygame.display.get_window_size()[1] / 100) * 5 + 40 # 20% height
-    #         50
-    #     )
-    # )
 
     bg.convert()
 
@@ -143,8 +132,8 @@ def main():
 
     allsprites = pygame.sprite.Group()
 
-    SCREEN_WIDTH = screen.get_width()
-    SCREEN_HEIGHT = screen.get_height()
+    WINDOW_WIDTH = screen.get_width()
+    WINDOW_HEIGHT = screen.get_height()
 
     pygame.camera.init()
     cameras = pygame.camera.list_cameras()
@@ -164,7 +153,7 @@ def main():
         final image cant be bigger than 80% of screen height
         
     """
-    panel_height = SCREEN_HEIGHT * 0.8 # Height can't be more than 80%
+    panel_height = WINDOW_HEIGHT * 0.8 # Height can't be more than 80%
     # how many times does original image fit in height? Width times THAT
     panel_width = IMG_WIDTH * (panel_height / IMG_HEIGHT)
     panel_height = int(panel_height)
@@ -263,8 +252,8 @@ def main():
         screen.blit(
             resized_img, 
             (
-                SCREEN_WIDTH/2 - BIG_IMG_WIDTH / 2, 
-                SCREEN_HEIGHT/2 - BIG_IMG_HEIGHT / 2
+                WINDOW_WIDTH/2 - BIG_IMG_WIDTH / 2, 
+                WINDOW_HEIGHT/2 - BIG_IMG_HEIGHT / 2
             )
         )
         allsprites.update()
