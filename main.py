@@ -4,7 +4,7 @@ import pygame.camera
 
 text_color = (0,255,0)
 countdown_length = 4
-display_result_length = 5
+display_result_length = 4
 
 # TODO move bg image according to scale (center cutoffs)
 
@@ -43,33 +43,8 @@ class ScreenText(pygame.sprite.Sprite):
         self.rect = (self.pos, self.image.get_size())
 
 
-def get_picture():
-    camera_resolution = '1280x720'
-    filename = 'image_' + str(datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
-    # example: fswebcam -r 1280x720 --na-banner image_2021-02-10_14:57:54
-    command = 'fswebcam -r {s_resolution} --na-banner {s_filename}'.format(s_resolution = camera_resolution, s_filename = filename)
-    # os.system(command)
-    
-
 def get_main_dir():
     return os.path.split(os.path.abspath(__file__))[0]
-
-
-# loads image resources, takes a filename as arg
-# when colorkey has argument -1 the background will be made transparant based of topleft pixel
-def load_image(name, colorkey=None):
-    fullname = os.path.join(get_main_dir(), name)
-    try:
-        image = pygame.image.load(fullname)
-    except pygame.error:
-        print("Cannot load image:", fullname)
-        raise SystemExit(str(geterror()))
-    image = image.convert()
-    if colorkey is not None:
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey, pygame.RLEACCEL)
-    return image
 
 
 def get_background(panel):
@@ -159,6 +134,7 @@ def resize_img(img, width, height, big_img):
     )
 
     return new_img
+
 
 def main():
     pygame.init()
