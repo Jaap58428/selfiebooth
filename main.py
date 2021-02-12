@@ -4,6 +4,7 @@ import pygame.camera
 
 text_color = (0,255,0)
 countdown_length = 4
+display_result_length = 5
 
 # TODO move bg image according to scale (center cutoffs)
 
@@ -50,11 +51,6 @@ def get_picture():
     # os.system(command)
     
 
-
-def is_running_on_rpi():
-    return platform.uname()[0] != 'Windows'
-
-
 def get_main_dir():
     return os.path.split(os.path.abspath(__file__))[0]
 
@@ -78,7 +74,7 @@ def load_image(name, colorkey=None):
 
 def get_background(panel):
 
-    fullname = os.path.join(get_main_dir(), 'inside_temp.png')
+    fullname = os.path.join(get_main_dir(), 'background.png')
     try:
         bg_image = pygame.image.load(fullname)
     except pygame.error:
@@ -218,6 +214,7 @@ def main():
     state = 'idle'
 
     time_button_pressed = 0
+    time_pic_taken = 0
 
     running = True
     while running:
@@ -230,9 +227,17 @@ def main():
         if state == 'countdown':
             # wait untill countdown_length seconds have passed
             if pygame.time.get_ticks() > (time_button_pressed + (countdown_length * 1000)):
-                print('picture now!')
                 screen_text.change_pos((-1000, -1000))
                 countdown_text.change_pos((-1000, -1000))
+                screen_text.change_text('Great picture?')
+                screen_text.pos_to_center(0, -400)
+                time_pic_taken = pygame.time.get_ticks()
+                # actually save picture here
+
+                filename = 'image_' + str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
+                fullname = os.path.join(get_main_dir(), 'images', filename)
+                pygame.image.save(img, fullname)
+
                 state = 'result'
             else: 
                 timer_text = str(int(
@@ -249,9 +254,13 @@ def main():
 
         # Display the picture taken to the user
         elif state == 'result':
-            # TODO
-            print('display result for XX seconds')
-            state = 'idle'
+            # 
+            if pygame.time.get_ticks() > (time_pic_taken + (display_result_length * 1000)):
+                # enough time has passed
+                screen_text.change_pos((-1000, -1000))
+                state = 'idle'
+            else:
+                pass
 
         # Default state: waiting for interaction
         elif state == 'idle': 
@@ -268,9 +277,11 @@ def main():
 
         
 
-        # grab next frame    
-        img = webcam.get_image()
-        resized_img = resize_img(img, panel_width, panel_height, big_img)
+        # dont do this while showing result
+        if state is not 'result':
+            # grab next frame    
+            img = webcam.get_image()
+            resized_img = resize_img(img, panel_width, panel_height, big_img)
 
         # draw webcam feed
         screen.blit(
