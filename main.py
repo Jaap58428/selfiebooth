@@ -1,6 +1,17 @@
 from datetime import datetime
-import os, pygame
+import os, pygame, platform
 import pygame.camera
+
+is_running_on_pi = platform.uname()[0] != 'Windows'
+if is_running_on_pi:
+    import RPi.GPIO as GPIO
+    input_pin = 11
+    output_pin = 7
+
+    GPIO.setmode(GPIO.BOARD)
+
+    GPIO.setup(output_pin, GPIO.OUT)
+    GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 text_color = (0,255,0)
 countdown_length = 4
@@ -79,7 +90,6 @@ class CameraSprite(pygame.sprite.Sprite):
         self.panel_height = int(panel_height)
         self.panel_width = int(panel_width)
         return self.panel_width, self.panel_height
-
 
 
 # TODO move bg image according to scale (center cutoffs)
@@ -188,9 +198,6 @@ def get_background(panel):
     return bg
 
 
-
-
-
 def main():
     print('Starting selfie booth...')
     pygame.init()
@@ -284,6 +291,13 @@ def main():
                     countdown_text.pos_to_center(0, 100)
                     time_button_pressed = pygame.time.get_ticks()
                     state = 'countdown'
+            if is_running_on_pi and GPIO.input(input_pin) == 0:
+                screen_text.change_text('Get ready')
+                screen_text.pos_to_center(0, -200)
+                countdown_text.pos_to_center(0, 100)
+                time_button_pressed = pygame.time.get_ticks()
+                state = 'countdown'
+            
 
         # dont do this while showing result
         if state is not 'result':
