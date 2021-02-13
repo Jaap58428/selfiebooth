@@ -2,6 +2,8 @@ from datetime import datetime
 import os, pygame, platform
 import pygame.camera
 
+# Change /etc/xdg/lxsession/LXDE-pi/autostart to fix autostarting
+
 is_running_on_pi = platform.uname()[0] != 'Windows'
 if is_running_on_pi:
     import RPi.GPIO as GPIO
@@ -67,15 +69,15 @@ class CameraSprite(pygame.sprite.Sprite):
         if self.will_capture:
             self.real_image = self.webcam.get_image()
             # draw webcam feed
-            self.image = pygame.transform.scale(
-                self.real_image,
-                (
-                    self.panel_width, 
-                    self.panel_height,
-                ),
-                self.image
-            )
-        
+            # self.image = pygame.transform.scale(
+            #     self.real_image,
+            #     (
+            #         self.panel_width, 
+            #         self.panel_height,
+            #     ),
+            #     self.image
+            # )
+        self.image = self.real_image
         return self.image
 
 
