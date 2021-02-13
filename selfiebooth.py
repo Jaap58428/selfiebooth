@@ -2,7 +2,7 @@ from datetime import datetime
 import os, pygame, platform
 import pygame.camera
 
-# Change /etc/xdg/lxsession/LXDE-pi/autostart to fix autostarting
+# Edit /home/pi/.config/autostart/PiCube.desktop to fix autostarting
 
 is_running_on_pi = platform.uname()[0] != 'Windows'
 if is_running_on_pi:
