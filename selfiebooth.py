@@ -66,18 +66,16 @@ class CameraSprite(pygame.sprite.Sprite):
         return self.real_image
 
     def update(self):
-        if self.will_capture:
-            self.real_image = self.webcam.get_image()
-            # draw webcam feed
-            # self.image = pygame.transform.scale(
-            #     self.real_image,
-            #     (
-            #         self.panel_width, 
-            #         self.panel_height,
-            #     ),
-            #     self.image
-            # )
-        self.image = self.real_image
+        self.real_image = self.webcam.get_image(self.real_image)
+        # draw webcam feed
+        self.image = pygame.transform.scale(
+            self.real_image,
+            (
+                self.panel_width, 
+                self.panel_height,
+            ),
+            self.image
+        )
         return self.image
 
 
@@ -108,8 +106,7 @@ class ScreenText(pygame.sprite.Sprite):
         self.rect = (self.pos, self.image.get_size())
 
     def update(self):
-        self.image = self.font.render(self.text, 1, text_color)
-        self.rect = (self.pos, self.image.get_size())
+        pass
 
     def change_text(self, new_text):
         self.text = new_text
@@ -175,15 +172,15 @@ def get_background(panel):
         )
     )
 
-    header_intro_font = pygame.font.Font(None, 50)
-    header_intro_text = header_intro_font.render("Welcome to the", 1, text_color)
-    bg.blit(
-        header_intro_text, 
-        (
-            WINDOW_WIDTH / 2 - header_intro_text.get_width() / 2,
-            10
-        )
-    )
+    # header_intro_font = pygame.font.Font(None, 50)
+    # header_intro_text = header_intro_font.render("Welcome to the", 1, text_color)
+    # bg.blit(
+    #     header_intro_text, 
+    #     (
+    #         WINDOW_WIDTH / 2 - header_intro_text.get_width() / 2,
+    #         10
+    #     )
+    # )
 
     header_main_font = pygame.font.Font(None, 120)
     header_main_text = header_main_font.render("Selfie Booth!", 1, text_color)
@@ -191,7 +188,7 @@ def get_background(panel):
         header_main_text, 
         (
             WINDOW_WIDTH / 2 - header_main_text.get_width() / 2,
-            50
+            10
         )
     )
 
@@ -304,13 +301,13 @@ def main():
         # dont do this while showing result
         if state is not 'result':
             # grab next frame    
-            webcam.will_capture = True
-        else:
-            webcam.will_capture = False
+            webcam.update()
+            # webcam.will_capture = True
+        # else:
+            # webcam.will_capture = False
        
-        allsprites.update()
         allsprites.draw(screen)
-        pygame.display.update()
+        pygame.display.update(webcam.rect)
 
 
 if __name__ == "__main__":
