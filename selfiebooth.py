@@ -6,7 +6,6 @@ import pygame
 import pygame.camera
 
 # Edit /home/pi/.config/autostart/PiCube.desktop to fix autostarting
-
 is_running_on_pi = platform.uname()[0] != 'Windows'
 if is_running_on_pi:
     import RPi.GPIO as GPIO
@@ -18,7 +17,8 @@ if is_running_on_pi:
     GPIO.setup(output_pin, GPIO.OUT)
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-text_color = (0, 255, 0)
+# https://rgbcolorcode.com/color/
+text_color = (196,163,27)
 countdown_length = 4
 display_result_length = 4
 
@@ -172,16 +172,6 @@ def get_background(panel):
             WINDOW_HEIGHT / 2 - panel.get_height() / 2,
         )
     )
-
-    # header_intro_font = pygame.font.Font(None, 50)
-    # header_intro_text = header_intro_font.render("Welcome to the", 1, text_color)
-    # bg.blit(
-    #     header_intro_text,
-    #     (
-    #         WINDOW_WIDTH / 2 - header_intro_text.get_width() / 2,
-    #         10
-    #     )
-    # )
 
     header_main_font = pygame.font.Font(None, 120)
     header_main_text = header_main_font.render("Selfie Booth!", 1, text_color)
