@@ -1,5 +1,8 @@
+import os
+import platform
 from datetime import datetime
-import os, pygame, platform
+
+import pygame
 import pygame.camera
 
 # Edit /home/pi/.config/autostart/PiCube.desktop to fix autostarting
@@ -7,8 +10,8 @@ import pygame.camera
 is_running_on_pi = platform.uname()[0] != 'Windows'
 if is_running_on_pi:
     import RPi.GPIO as GPIO
-    input_pin = 11
-    output_pin = 7
+    input_pin = 3
+    output_pin = 5
 
     GPIO.setmode(GPIO.BOARD)
 
@@ -139,7 +142,7 @@ def get_background(panel):
         bg_image = pygame.image.load(fullname)
     except pygame.error:
         print("Cannot load image:", fullname)
-        raise SystemExit(str(geterror()))
+        exit()
     bg_image = bg_image.convert()
 
     bg = bg_image
