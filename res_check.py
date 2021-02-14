@@ -18,4 +18,18 @@ for index, row in table[["W", "H"]].iterrows():
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     resolutions[str(width)+"x"+str(height)] = "OK"
 
-print(resolutions)
+res_list = list(dict.fromkeys(resolutions))
+
+new_res_list = []
+
+for res in res_list:
+    temp = res.split('x')
+    new_res_list.append(
+        (
+            int(float(temp[0])), 
+            int(float(temp[1]))
+        )
+    )
+
+for res in new_res_list:
+    print (res)

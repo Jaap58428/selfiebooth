@@ -1,9 +1,39 @@
 import os
 import platform
 from datetime import datetime
+import time
 
 import pygame
 import pygame.camera
+
+# https://rgbcolorcode.com/
+text_color = (0, 136, 204)
+border_color = (0, 136, 204)
+countdown_length = 4 * 1000
+display_result_length = 4 * 1000
+
+possible_resolutions = [
+    (160, 120),
+    (176, 144),
+    (544, 288),
+    (320, 176),
+    (320, 240),
+    (432, 240),
+    (352, 288),
+    (640, 360),
+    (800, 448),
+    (640, 480),
+    (864, 480),
+    (800, 600),  # [-7] or [11]
+    (960, 544),
+    (1024, 576),
+    (960, 720),
+    (1184, 656),
+    (1280, 720),
+    (1280, 960),  # [-1] or [17]
+]
+
+camera_resolution = possible_resolutions[11]
 
 # Edit /home/pi/.config/autostart/PiCube.desktop to fix autostarting
 is_running_on_pi = platform.uname()[0] != 'Windows'
@@ -17,12 +47,6 @@ if is_running_on_pi:
     GPIO.setup(output_pin, GPIO.OUT)
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# https://rgbcolorcode.com/
-text_color = (0, 136, 204)
-border_color = (0, 136, 204)
-countdown_length = 4 * 1000
-display_result_length = 4 * 1000
-
 
 class CameraSprite(pygame.sprite.Sprite):
     def __init__(self, allsprites):
@@ -30,11 +54,15 @@ class CameraSprite(pygame.sprite.Sprite):
 
         # flag to not update screen while in 'result' state
         self.will_capture = True
+        self.will_save = False
 
         pygame.camera.init()
         cameras = pygame.camera.list_cameras()
-        self.webcam = pygame.camera.Camera(cameras[0], (1280, 960))
+        self.webcam = pygame.camera.Camera(cameras[0], camera_resolution)
         self.webcam.start()
+        # used for saving higher res images, not displaying
+        self.high_res_cam = pygame.camera.Camera(
+            cameras[0], possible_resolutions[-1])
 
         # grab first frame
         self.image = self.webcam.get_image()
@@ -50,6 +78,26 @@ class CameraSprite(pygame.sprite.Sprite):
     def update(self):
         self.image = self.webcam.get_image(self.image)
         return self.image
+
+    def save_high_res_image(self):
+        self.webcam.stop()
+        pygame.camera.init()
+        cameras = pygame.camera.list_cameras()
+        self.webcam = pygame.camera.Camera(cameras[0], possible_resolutions[-1])
+        self.webcam.start()
+
+        filename = 'image_' + \
+            str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
+        fullname = os.path.join(get_main_dir(), 'images', filename)
+        pygame.image.save(self.webcam.get_image(), fullname)
+
+        self.webcam.stop()
+        pygame.camera.init()
+        cameras = pygame.camera.list_cameras()
+        self.webcam = pygame.camera.Camera(cameras[0], camera_resolution)
+        self.webcam.start()
+
+        self.will_save = False
 
     def get_panel(self, border_size=40):
         panel = pygame.Surface((
@@ -167,12 +215,12 @@ def main():
     print('Screen resolution is (w h)', WINDOW_WIDTH, WINDOW_HEIGHT)
 
     print('Opening camera ...')
-    webcam = CameraSprite(allsprites)
+    camera_sprite = CameraSprite(allsprites)
 
-    panel = webcam.get_panel()
+    panel = camera_sprite.get_panel()
 
-    screen_text = ScreenText(allsprites, 'PLACEHOLDER', 120)
-    countdown_text = ScreenText(allsprites, 'PLACEHOLDER', 200)
+    screen_text = ScreenText(allsprites, '', 120)
+    countdown_text = ScreenText(allsprites, '', 200)
 
     background = get_background(panel)
 
@@ -194,14 +242,10 @@ def main():
             screen_text.change_text('Great picture?')
             screen_text.pos_to_center(
                 0, (WINDOW_HEIGHT * 0.7) / 2)  # 70% from top
+            camera_sprite.will_save = True
             new_pic_time = pygame.time.get_ticks()
-            # actually save picture here
-
-            filename = 'image_' + \
-                str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
-            fullname = os.path.join(get_main_dir(), 'images', filename)
-            pygame.image.save(webcam.image, fullname)
         elif new_state == 'idle':
+            countdown_text.change_pos((-1000, -1000))
             screen_text.change_pos((-1000, -1000))
         else:
             print('Undefined state encountered!', new_state)
@@ -217,6 +261,7 @@ def main():
         if state == 'countdown':
             # wait untill countdown_length seconds have passed
             if pygame.time.get_ticks() > (btn_time + countdown_length):
+
                 state, btn_time, pic_time = switch_state(
                     'result', btn_time, pic_time)
             else:
@@ -252,10 +297,16 @@ def main():
 
         # dont do this while showing result
         if state is not 'result':
-            webcam.update()
+            camera_sprite.update()
 
         allsprites.draw(screen)
-        pygame.display.update(webcam.rect)
+        pygame.display.update(camera_sprite.rect)
+
+        # do this after a screen render to clean up text changes before halting
+        if camera_sprite.will_save:
+            now = datetime.now()
+            camera_sprite.save_high_res_image()
+            print('Taking picture took ms:', datetime.now() - now)
 
 
 if __name__ == "__main__":
