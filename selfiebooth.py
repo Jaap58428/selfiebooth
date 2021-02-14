@@ -18,83 +18,48 @@ if is_running_on_pi:
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # https://rgbcolorcode.com/
-text_color = (0,136,204)
-border_color = (0,136,204)
-countdown_length = 4
-display_result_length = 4
+text_color = (0, 136, 204)
+border_color = (0, 136, 204)
+countdown_length = 4 * 1000
+display_result_length = 4 * 1000
 
 
 class CameraSprite(pygame.sprite.Sprite):
     def __init__(self, allsprites):
         pygame.sprite.Sprite.__init__(self, allsprites)
 
+        # flag to not update screen while in 'result' state
         self.will_capture = True
 
         pygame.camera.init()
         cameras = pygame.camera.list_cameras()
-        self.webcam = pygame.camera.Camera(cameras[0])
+        self.webcam = pygame.camera.Camera(cameras[0], (1280, 960))
         self.webcam.start()
 
         # grab first frame
-        self.real_image = self.webcam.get_image()
+        self.image = self.webcam.get_image()
 
-        IMG_WIDTH = self.real_image.get_width()
-        IMG_HEIGHT = self.real_image.get_height()
-
-        print('Preparing image scaling for performance increase...')
-        panel_height = WINDOW_HEIGHT * 0.8  # Height can't be more than 80%
-        # how many times does original image fit in height? Width times THAT
-        panel_width = IMG_WIDTH * (panel_height / IMG_HEIGHT)
-        self.panel_height = int(panel_height)
-        self.panel_width = int(panel_width)
-
-        # create big img size for fast scaling
-        self.image = pygame.transform.scale(
-            self.real_image,
-            (self.panel_width, self.panel_height),
-        )
-
-        BIG_IMG_WIDTH = self.image.get_width()
-        BIG_IMG_HEIGHT = self.image.get_height()
+        self.IMG_WIDTH, self.IMG_HEIGHT = self.image.get_size()
 
         self.pos = (
-            WINDOW_WIDTH/2 - BIG_IMG_WIDTH / 2,
-            WINDOW_HEIGHT/2 - BIG_IMG_HEIGHT / 2
+            WINDOW_WIDTH/2 - self.IMG_WIDTH / 2,
+            WINDOW_HEIGHT/2 - self.IMG_HEIGHT / 2
         )
         self.rect = (self.pos, self.image.get_size())
 
-        print('Image scaling...')
-
-    def get_image(self):
-        return self.real_image
-
     def update(self):
-        self.real_image = self.webcam.get_image(self.real_image)
-        # draw webcam feed
-        self.image = pygame.transform.scale(
-            self.real_image,
-            (
-                self.panel_width,
-                self.panel_height,
-            ),
-            self.image
-        )
+        self.image = self.webcam.get_image(self.image)
         return self.image
 
-    def get_panel_size(self):
-        IMG_WIDTH = self.image.get_width()
-        IMG_HEIGHT = self.image.get_height()
+    def get_panel(self, border_size=40):
+        panel = pygame.Surface((
+            self.IMG_WIDTH + border_size,
+            self.IMG_HEIGHT + border_size
+        ))
+        panel.fill(border_color)
 
-        print('Preparing image scaling for performance increase...')
-        panel_height = WINDOW_HEIGHT * 0.8  # Height can't be more than 80%
-        # how many times does original image fit in height? Width times THAT
-        panel_width = IMG_WIDTH * (panel_height / IMG_HEIGHT)
-        self.panel_height = int(panel_height)
-        self.panel_width = int(panel_width)
-        return self.panel_width, self.panel_height
+        return panel
 
-
-# TODO move bg image according to scale (center cutoffs)
 
 class ScreenText(pygame.sprite.Sprite):
     def __init__(self, allsprites, text, initial_font_size):
@@ -114,9 +79,6 @@ class ScreenText(pygame.sprite.Sprite):
         self.text = new_text
         self.image = self.font.render(self.text, 1, text_color)
         self.rect = (self.pos, self.image.get_size())
-
-    def change_font(self, font_size):
-        self.font = pygame.font.Font(None, font_size)
 
     def change_pos(self, new_pos):
         self.pos = (new_pos)
@@ -207,71 +169,73 @@ def main():
     print('Opening camera ...')
     webcam = CameraSprite(allsprites)
 
-    print('Image loading succesful')
+    panel = webcam.get_panel()
 
-    panel_width, panel_height = webcam.get_panel_size()
-    border_size = 20
-    # +10 pixels on both sides to create a border
-    panel = pygame.Surface(
-        (panel_width + border_size, panel_height + border_size))
-    panel.fill(border_color)
-
-    print('Completing setup...')
-
-    screen_text = ScreenText(allsprites, '', 120)
-    countdown_text = ScreenText(allsprites, '', 200)
+    screen_text = ScreenText(allsprites, 'PLACEHOLDER', 120)
+    countdown_text = ScreenText(allsprites, 'PLACEHOLDER', 200)
 
     background = get_background(panel)
 
     state = 'idle'
 
-    time_button_pressed = 0
-    time_pic_taken = 0
+    btn_time = pygame.time.get_ticks()
+    pic_time = pygame.time.get_ticks()
 
     screen.blit(background, (0, 0))
 
+    def switch_state(new_state, new_btn_time, new_pic_time):
+        if new_state == 'countdown':
+            screen_text.change_text('Get ready')
+            screen_text.pos_to_center(0, -200)
+            countdown_text.pos_to_center(0, 100)
+            new_btn_time = pygame.time.get_ticks()
+        elif new_state == 'result':
+            countdown_text.change_pos((-1000, -1000))
+            screen_text.change_text('Great picture?')
+            screen_text.pos_to_center(
+                0, (WINDOW_HEIGHT * 0.7) / 2)  # 70% from top
+            new_pic_time = pygame.time.get_ticks()
+            # actually save picture here
+
+            filename = 'image_' + \
+                str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
+            fullname = os.path.join(get_main_dir(), 'images', filename)
+            pygame.image.save(webcam.image, fullname)
+        elif new_state == 'idle':
+            screen_text.change_pos((-1000, -1000))
+        else:
+            print('Undefined state encountered!', new_state)
+            exit()
+
+        return new_state, new_btn_time, new_pic_time
+
     print('Setup complete. Starting main loop.')
-    print('Have a good day! :)')
     while True:
         event_list = pygame.event.get()
 
         # Show a countdown to the user
         if state == 'countdown':
             # wait untill countdown_length seconds have passed
-            if pygame.time.get_ticks() > (time_button_pressed + (countdown_length * 1000)):
-                countdown_text.change_pos((-1000, -1000))
-                screen_text.change_text('Great picture?')
-                screen_text.pos_to_center(0, (WINDOW_HEIGHT * 0.7) / 2) # 70% from top
-                time_pic_taken = pygame.time.get_ticks()
-                # actually save picture here
-
-                filename = 'image_' + \
-                    str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
-                fullname = os.path.join(get_main_dir(), 'images', filename)
-                pygame.image.save(webcam.real_image, fullname)
-
-                state = 'result'
+            if pygame.time.get_ticks() > (btn_time + countdown_length):
+                state, btn_time, pic_time = switch_state(
+                    'result', btn_time, pic_time)
             else:
-                timer_text = str(int(
-                    countdown_length -
-                    ((pygame.time.get_ticks() - time_button_pressed) / 1000)
-                ))
-
+                timer_text = str(
+                    int(
+                        (countdown_length - (pygame.time.get_ticks() - btn_time)) / 1000
+                    )
+                )
                 if timer_text == '0':
                     timer_text = 'Smile!'
-
                 countdown_text.change_text(timer_text)
                 countdown_text.pos_to_center(0, 100)
 
         # Display the picture taken to the user
         elif state == 'result':
-            #
-            if pygame.time.get_ticks() > (time_pic_taken + (display_result_length * 1000)):
-                # enough time has passed
-                screen_text.change_pos((-1000, -1000))
-                state = 'idle'
-            else:
-                pass
+            # if enough time has passed
+            if pygame.time.get_ticks() > (pic_time + display_result_length):
+                state, btn_time, pic_time = switch_state(
+                    'idle', btn_time, pic_time)
 
         # Default state: waiting for interaction
         elif state == 'idle':
@@ -280,17 +244,11 @@ def main():
                 if e.type == pygame.QUIT or (e.type == pygame.KEYUP and e.key == pygame.K_ESCAPE):
                     exit()
                 if e.type == pygame.KEYUP and e.key == pygame.K_p:
-                    screen_text.change_text('Get ready')
-                    screen_text.pos_to_center(0, -200)
-                    countdown_text.pos_to_center(0, 100)
-                    time_button_pressed = pygame.time.get_ticks()
-                    state = 'countdown'
+                    state, btn_time, pic_time = switch_state(
+                        'countdown', btn_time, pic_time)
             if is_running_on_pi and GPIO.input(input_pin) == 0:
-                screen_text.change_text('Get ready')
-                screen_text.pos_to_center(0, -200)
-                countdown_text.pos_to_center(0, 100)
-                time_button_pressed = pygame.time.get_ticks()
-                state = 'countdown'
+                state, btn_time, pic_time = switch_state(
+                    'countdown', btn_time, pic_time)
 
         # dont do this while showing result
         if state is not 'result':
