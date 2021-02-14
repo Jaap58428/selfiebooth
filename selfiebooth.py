@@ -17,8 +17,9 @@ if is_running_on_pi:
     GPIO.setup(output_pin, GPIO.OUT)
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# https://rgbcolorcode.com/color/
-text_color = (196,163,27)
+# https://rgbcolorcode.com/
+text_color = (0,136,204)
+border_color = (0,136,204)
 countdown_length = 4
 display_result_length = 4
 
@@ -213,7 +214,7 @@ def main():
     # +10 pixels on both sides to create a border
     panel = pygame.Surface(
         (panel_width + border_size, panel_height + border_size))
-    panel.fill((255, 0, 0))
+    panel.fill(border_color)
 
     print('Completing setup...')
 
@@ -240,7 +241,7 @@ def main():
             if pygame.time.get_ticks() > (time_button_pressed + (countdown_length * 1000)):
                 countdown_text.change_pos((-1000, -1000))
                 screen_text.change_text('Great picture?')
-                screen_text.pos_to_center(0, (WINDOW_HEIGHT * 0.8) / 2)
+                screen_text.pos_to_center(0, (WINDOW_HEIGHT * 0.7) / 2) # 70% from top
                 time_pic_taken = pygame.time.get_ticks()
                 # actually save picture here
 
