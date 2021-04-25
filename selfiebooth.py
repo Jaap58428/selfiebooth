@@ -12,6 +12,7 @@ border_color = (0, 136, 204)
 countdown_length = 4 * 1000
 display_result_length = 4 * 1000
 
+# These can easily be found out by using the res_check.py script
 possible_resolutions = [
     (160, 120),
     (176, 144),
@@ -33,7 +34,9 @@ possible_resolutions = [
     (1280, 960),  # [-1] or [17]
 ]
 
-camera_resolution = possible_resolutions[11]
+# Beware of choosing higher resolutions as this might slow the script down
+# If a laggy system is okay for you, go ahead. If you want a more responsive system keep it lower
+camera_resolution = possible_resolutions[-1]
 
 # Edit /home/pi/.config/autostart/PiCube.desktop to fix autostarting
 is_running_on_pi = platform.uname()[0] != 'Windows'
@@ -50,54 +53,48 @@ if is_running_on_pi:
 
 class CameraSprite(pygame.sprite.Sprite):
     def __init__(self, allsprites):
+        # include this sprite in updated sprites
         pygame.sprite.Sprite.__init__(self, allsprites)
 
-        # flag to not update screen while in 'result' state
+        self.pic_save_directory = os.path.join(get_main_dir(), 'images')
+
+        # flags to not update screen while in 'result' state
         self.will_capture = True
         self.will_save = False
 
+        # Initialize pygame camera object (from any available camera device)
         pygame.camera.init()
+        
+        # I thought about make a catch for if no camera was found.
+        # This didn't work how i'd like and if non is found it just throws a segmentation  fault
         cameras = pygame.camera.list_cameras()
+        
+        # Set camera variables and start the device
         self.webcam = pygame.camera.Camera(cameras[0], camera_resolution)
         self.webcam.start()
-        # used for saving higher res images, not displaying
-        self.high_res_cam = pygame.camera.Camera(
-            cameras[0], possible_resolutions[-1])
-
+        
         # grab first frame
         self.image = self.webcam.get_image()
 
+        # Get size, save and calculate position on window based of this
         self.IMG_WIDTH, self.IMG_HEIGHT = self.image.get_size()
-
         self.pos = (
             WINDOW_WIDTH/2 - self.IMG_WIDTH / 2,
             WINDOW_HEIGHT/2 - self.IMG_HEIGHT / 2
         )
         self.rect = (self.pos, self.image.get_size())
 
+    # Every sprite update another screengrab is done
     def update(self):
         self.image = self.webcam.get_image(self.image)
-        return self.image
 
-    def save_high_res_image(self):
-        self.webcam.stop()
-        pygame.camera.init()
-        cameras = pygame.camera.list_cameras()
-        self.webcam = pygame.camera.Camera(cameras[0], possible_resolutions[-1])
-        self.webcam.start()
-
+    def save_image(self):
         filename = 'image_' + \
             str(datetime.now().strftime('%Y%m%d_%H%M%S')) + '.jpg'
-        fullname = os.path.join(get_main_dir(), 'images', filename)
-        pygame.image.save(self.webcam.get_image(), fullname)
+        fullname = os.path.join(self.pic_save_directory, filename)
+        pygame.image.save(self.image, fullname)
 
-        self.webcam.stop()
-        pygame.camera.init()
-        cameras = pygame.camera.list_cameras()
-        self.webcam = pygame.camera.Camera(cameras[0], camera_resolution)
-        self.webcam.start()
-
-        self.will_save = False
+        self.will_save = False  # reset flag so no save will be done on next scriptloop
 
     def get_panel(self, border_size=40):
         panel = pygame.Surface((
@@ -156,7 +153,10 @@ def get_background(panel):
 
     bg = bg_image
 
-    # scale to height
+    # TODO this is currently floating left and/or top, rather have it centered?
+    # other solution would be to take an bg image which doesn't get affected by warping
+
+    # Below is almost equal to CSS's object-fit: contain
     # if the aspect ratio is narrower than the screen
     if (bg.get_width() * (WINDOW_HEIGHT / bg.get_height())) <= WINDOW_WIDTH:
         # scale to width and lose some content top and bottom
@@ -176,6 +176,8 @@ def get_background(panel):
         (bg_w, bg_h),
     )
 
+    # include the webcam border in the background for optimalisation, these pixels don't need regular updating
+    # It is currently simply centered. If changed consider that the camera_sprite also needs adjusting
     bg.blit(
         panel,
         (
@@ -184,15 +186,17 @@ def get_background(panel):
         )
     )
 
-    header_main_font = pygame.font.Font(None, 120)
-    header_main_text = header_main_font.render("Selfie Booth!", 1, text_color)
-    bg.blit(
-        header_main_text,
-        (
-            WINDOW_WIDTH / 2 - header_main_text.get_width() / 2,
-            10
-        )
-    )
+    # I excluded this for now, as it might be pretty obvious from the instalation as a whole
+    # also, sometimes this overlapped with the camera so this is a bit safer
+    # header_main_font = pygame.font.Font(None, 120)
+    # header_main_text = header_main_font.render("Selfie Booth!", 1, text_color)
+    # bg.blit(
+    #     header_main_text,
+    #     (
+    #         WINDOW_WIDTH / 2 - header_main_text.get_width() / 2,
+    #         10
+    #     )
+    # )
 
     bg.convert()
 
@@ -201,12 +205,16 @@ def get_background(panel):
 
 def main():
     print('Starting selfie booth...')
+
+    # Initialize pygame
     pygame.init()
-    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN) # set to fullscreen
     pygame.display.set_caption("Selfie Booth")
 
+    # Create sprites group
     allsprites = pygame.sprite.Group()
 
+    # get and save screen size globally
     global WINDOW_WIDTH
     WINDOW_WIDTH = screen.get_width()
     global WINDOW_HEIGHT
@@ -214,9 +222,11 @@ def main():
 
     print('Screen resolution is (w h)', WINDOW_WIDTH, WINDOW_HEIGHT)
 
+    # Create the camera sprite, every tick/update this updates
     print('Opening camera ...')
     camera_sprite = CameraSprite(allsprites)
 
+    # panel is the surface the camera_sprite is blit on to seem like its a border
     panel = camera_sprite.get_panel()
 
     screen_text = ScreenText(allsprites, '', 120)
@@ -231,6 +241,7 @@ def main():
 
     screen.blit(background, (0, 0))
 
+    # define state switcher function (only used in main)
     def switch_state(new_state, new_btn_time, new_pic_time):
         if new_state == 'countdown':
             screen_text.change_text('Get ready')
@@ -253,8 +264,13 @@ def main():
 
         return new_state, new_btn_time, new_pic_time
 
+    py_clock = pygame.time.Clock()
+
     print('Setup complete. Starting main loop.')
     while True:
+        # Limit to 60fps to save pi from throtling on high temps
+        py_clock.tick(60)
+
         event_list = pygame.event.get()
 
         # Show a countdown to the user
@@ -304,9 +320,11 @@ def main():
 
         # do this after a screen render to clean up text changes before halting
         if camera_sprite.will_save:
-            now = datetime.now()
-            camera_sprite.save_high_res_image()
-            print('Taking picture took ms:', datetime.now() - now)
+            now = datetime.now()  # see print below
+            camera_sprite.save_image()
+
+            # This print is included to see monitor performance 
+            print('Taking picture took:', datetime.now() - now)
 
 
 if __name__ == "__main__":

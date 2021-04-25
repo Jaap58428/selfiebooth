@@ -4,6 +4,9 @@
 import pandas as pd
 import cv2
 
+print('Trying to find all resolutions. During your proces your webcam cant be used by other programs. If you have a webcam indication light it will blink for some time.')
+print('Please wait while the script collects resolutions...\n')
+
 url = "https://en.wikipedia.org/wiki/List_of_common_resolutions"
 table = pd.read_html(url)[0]
 table.columns = table.columns.droplevel()
@@ -31,5 +34,10 @@ for res in res_list:
         )
     )
 
-for res in new_res_list:
-    print (res)
+if len(res_list) < 1:
+    print('No resolutions where found. This normally shouldnt happen!')
+else:
+    print('The following resolutions where found:')
+    for res in new_res_list:
+        print (res, end=', ')
+    print('\n\nThe highest resolution is', new_res_list[-1], 'This should be the last one in the list.\n')
