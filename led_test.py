@@ -32,9 +32,10 @@ try:
             for pin_number in pin_list:
                 # turn on for 0.2 second
                 GPIO.output(pin_number, 1)  
-                sleep(0.5)
+                GPIO.output(pin_number + 1, 1)  
+                sleep(0.2)
                 GPIO.output(pin_number, 0)
-                sleep(0.5)
+                GPIO.output(pin_number + 1, 0)
                 
 except KeyboardInterrupt:          # trap a CTRL+C keyboard interrupt  
     GPIO.cleanup()                 # resets all GPIO ports used by this program  
