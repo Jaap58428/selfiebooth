@@ -17,7 +17,7 @@ all_led_pins = [
     right_led_pins,
 ]
 
-GPIO.setmode(GPIO.BOARD)
+GPIO.setmode(GPIO.BOARD)      
 
 # set all pins as output pins
 for pin_list in all_led_pins:
@@ -25,17 +25,41 @@ for pin_list in all_led_pins:
         print('Setting pin number: ' + str(pin_number))
         GPIO.setup(pin_number, GPIO.OUT)
 
+print('Now all leds should blink after each other for 0.2 seconds...')
 try:  
     while True:  
-        # for every pin
+        # for every pin after each other
         for pin_list in all_led_pins:
             for pin_number in pin_list:
                 # turn on for 0.2 second
                 GPIO.output(pin_number, 1)  
-                GPIO.output(pin_number + 1, 1)  
                 sleep(0.2)
                 GPIO.output(pin_number, 0)
-                GPIO.output(pin_number + 1, 0)
+        
+        # turn on all pins
+        for pin_list in all_led_pins:
+            for pin_number in pin_list:
+                GPIO.output(pin_number, 1)
+
+        sleep(0.5)
+
+        for pin_list in all_led_pins:
+            for pin_number in pin_list:
+                GPIO.output(pin_number, 0)
+
+        sleep(0.5)        
+        # turn on all pins
+        for pin_list in all_led_pins:
+            for pin_number in pin_list:
+                GPIO.output(pin_number, 1)
+
+        sleep(0.5)
+
+        for pin_list in all_led_pins:
+            for pin_number in pin_list:
+                GPIO.output(pin_number, 0)
+
+        sleep(0.5)
                 
 except KeyboardInterrupt:          # trap a CTRL+C keyboard interrupt  
     GPIO.cleanup()                 # resets all GPIO ports used by this program  
