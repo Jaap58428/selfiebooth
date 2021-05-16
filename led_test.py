@@ -2,13 +2,13 @@ from time import sleep
 import RPi.GPIO as GPIO
 
 # unused in this script (might need rewiring as it runs from output to ground, needs input?)
-button_pin = 12  
+button_pin = 32
 
-leds_top_left_pins  = [16, 20, 21]
-leds_top_right_pins = [13, 19 ,26]
+leds_top_left_pins  = [36, 38, 40]
+leds_top_right_pins = [33, 35, 37]
 
-left_led_pins  = [7, 8, 25, 24, 23, 18, 15, 14, 4]
-right_led_pins = [6, 5, 11, 9,  10, 22, 27, 17]
+left_led_pins  = [31, 29, 23, 21, 19, 15, 13, 11]
+right_led_pins = [26, 24, 22, 18, 16, 12, 10, 8, 7]
 
 all_led_pins = [
     leds_top_left_pins,
@@ -22,6 +22,7 @@ GPIO.setmode(GPIO.BOARD)
 # set all pins as output pins
 for pin_list in all_led_pins:
     for pin_number in pin_list:
+        print('Setting pin number: ' + str(pin_number))
         GPIO.setup(pin_number, GPIO.OUT)
 
 try:  
