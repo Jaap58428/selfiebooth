@@ -42,13 +42,34 @@ camera_resolution = possible_resolutions[-1]
 is_running_on_pi = platform.uname()[0] != 'Windows'
 if is_running_on_pi:
     import RPi.GPIO as GPIO
-    input_pin = 3
-    output_pin = 5
+    button_pin = 32
+
+    leds_top_left_pins  = [36, 38, 40]
+    leds_top_right_pins = [33, 35, 37]
+    leds_top_max_index = len(leds_top_left_pins) - 1
+
+    left_led_pins  = [31, 29, 23, 21, 19, 15, 13, 11]
+    left_led_max_index = len(left_led_pins) - 1
+    
+    right_led_pins = [26, 24, 22, 18, 16, 12, 10, 8, 7]
+    right_led_max_index = len(right_led_pins) - 1
+
+    max_indexi = [leds_top_max_index, left_led_max_index, right_led_max_index]
+
+    all_led_pins = [
+        leds_top_left_pins,
+        leds_top_right_pins,
+        left_led_pins,
+        right_led_pins,
+    ]
 
     GPIO.setmode(GPIO.BOARD)
 
-    GPIO.setup(output_pin, GPIO.OUT)
-    GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    print('Setting pin numbers...')
+    # set all pins as output pins
+    for pin_list in all_led_pins:
+        for pin_number in pin_list:
+            GPIO.setup(pin_number, GPIO.OUT)
 
 
 class CameraSprite(pygame.sprite.Sprite):
@@ -203,8 +224,40 @@ def get_background(panel):
     return bg
 
 
+def update_all_leds(led_state):
+    # if its not yet time to update return unchanged state
+    if pygame.time.get_ticks() - led_state[0] > 2000:
+        return led_state
+
+    leds_indexi = led_state[1]
+
+    # loop through led indixi
+    # use range as it also applies to max_indixi
+    for i in range(3):
+        # turn on last/current led
+        GPIO.output(leds_indexi[i], 1)
+
+        # update led index
+        if leds_indexi[i] < max_indexi[i]:
+            leds_indexi[i] += 1
+        else:
+            leds_indexi[i] = 0
+
+        # turn off the next led
+        GPIO.output(leds_indexi[i], 0)
+
+    return [pygame.time.get_ticks(), leds_indexi]
+
+
 def main():
     print('Starting selfie booth...')
+
+    if is_running_on_pi:
+        print('Turning on all leds...')
+        for pin_list in all_led_pins:
+            for pin_number in pin_list:
+                GPIO.output(pin_number, 1)
+
 
     # Initialize pygame
     pygame.init()
@@ -239,6 +292,11 @@ def main():
     btn_time = pygame.time.get_ticks()
     pic_time = pygame.time.get_ticks()
 
+    last_led_update_time = pygame.time.get_ticks()
+    leds_indexi = [0, 0, 0]
+
+    led_state = [last_led_update_time, leds_indexi]
+
     screen.blit(background, (0, 0))
 
     # define state switcher function (only used in main)
@@ -270,6 +328,9 @@ def main():
     while True:
         # Limit to 60fps to save pi from throtling on high temps
         py_clock.tick(60)
+
+        if is_running_on_pi:
+            led_state = update_all_leds(led_state)
 
         event_list = pygame.event.get()
 
